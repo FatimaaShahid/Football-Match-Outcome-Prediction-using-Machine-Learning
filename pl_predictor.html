@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PL Points Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --pl-purple: #38003c;
+    --pl-green:  #00ff85;
+    --pl-white:  #f7f4f0;
+    --pl-gray:   #1a1a2e;
+    --pl-mid:    #2d2d44;
+    --pl-border: rgba(255,255,255,0.08);
+    --pl-muted:  rgba(247,244,240,0.45);
+    --pl-subtle: rgba(247,244,240,0.12);
+    --radius:    10px;
+    --radius-lg: 16px;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    background: var(--pl-gray);
+    color: var(--pl-white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(56,0,60,0.6) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(0,255,133,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--pl-border);
+    animation: fadeDown 0.5s ease both;
+  }
+
+  .header-badge {
+    width: 56px; height: 56px;
+    background: var(--pl-purple);
+    border: 2px solid var(--pl-green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 24px rgba(0,255,133,0.2);
+  }
+
+  .header-badge svg { width: 28px; height: 28px; fill: var(--pl-green); }
+
+  .header-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--pl-white);
+  }
+
+  .header-title span { color: var(--pl-green); }
+
+  .header-sub {
+    font-size: 0.82rem;
+    color: var(--pl-muted);
+    margin-top: 4px;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+
+  /* SETTINGS BAR */
+  .settings-bar {
+    background: var(--pl-purple);
+    border: 1px solid rgba(0,255,133,0.2);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeUp 0.5s 0.1s ease both;
+  }
+
+  .settings-bar input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(0,255,133,0.25);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    color: var(--pl-white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .settings-bar input::placeholder { color: rgba(247,244,240,0.3); font-size: 0.78rem; }
+  .settings-bar input:focus { border-color: var(--pl-green); }
+
+  .settings-bar label {
+    font-size: 0.75rem;
+    color: var(--pl-green);
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .btn-save {
+    background: var(--pl-green);
+    color: var(--pl-purple);
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 18px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn-save:hover { opacity: 0.88; }
+  .btn-save:active { transform: scale(0.97); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .status-dot.connected {
+    background: var(--pl-green);
+    box-shadow: 0 0 8px rgba(0,255,133,0.6);
+  }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    animation: fadeUp 0.5s 0.15s ease both;
+  }
+
+  @media (max-width: 620px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--pl-mid);
+    border: 1px solid var(--pl-border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+
+  .card-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--pl-green);
+    margin-bottom: 1rem;
+  }
+
+  /* TEAM GRID */
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .team-btn {
+    background: var(--pl-subtle);
+    border: 1px solid var(--pl-border);
+    border-radius: 8px;
+    padding: 7px 4px;
+    color: var(--pl-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-btn:hover {
+    border-color: rgba(0,255,133,0.3);
+    color: var(--pl-white);
+    background: rgba(0,255,133,0.06);
+  }
+
+  .team-btn.active {
+    background: var(--pl-green);
+    border-color: var(--pl-green);
+    color: var(--pl-purple);
+    font-weight: 700;
+  }
+
+  /* SEASON GRID */
+  .season-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .season-btn {
+    background: var(--pl-subtle);
+    border: 1px solid var(--pl-border);
+    border-radius: 8px;
+    padding: 8px 4px 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .season-btn:hover {
+    border-color: rgba(0,255,133,0.3);
+    background: rgba(0,255,133,0.06);
+  }
+
+  .season-btn.active {
+    background: var(--pl-green);
+    border-color: var(--pl-green);
+  }
+
+  .season-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--pl-white);
+    line-height: 1;
+  }
+
+  .season-btn.active .season-num { color: var(--pl-purple); }
+
+  .season-yr {
+    font-size: 0.6rem;
+    color: var(--pl-muted);
+    line-height: 1;
+  }
+
+  .season-btn.active .season-yr { color: var(--pl-purple); opacity: 0.7; }
+
+  /* STATS FORM */
+  .stats-card { grid-column: 1 / -1; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  @media (max-width: 620px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field.wide { grid-column: span 2; }
+
+  .field label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--pl-muted);
+  }
+
+  .field input {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--pl-border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    color: var(--pl-white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+  }
+
+  .field input::placeholder { color: rgba(247,244,240,0.2); }
+  .field input:focus { border-color: rgba(0,255,133,0.5); background: rgba(0,0,0,0.4); }
+  .field input.error { border-color: #ff4d6d; }
+
+  .field-hint {
+    font-size: 0.68rem;
+    color: rgba(247,244,240,0.3);
+    margin-top: 2px;
+  }
+
+  /* PREDICT BUTTON */
+  .predict-wrap {
+    margin-top: 1.25rem;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  .btn-predict {
+    width: 100%;
+    height: 58px;
+    background: linear-gradient(135deg, var(--pl-green) 0%, #00cc6a 100%);
+    color: var(--pl-purple);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 4px 24px rgba(0,255,133,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .btn-predict:hover {
+    opacity: 0.92;
+    box-shadow: 0 6px 32px rgba(0,255,133,0.35);
+  }
+
+  .btn-predict:active { transform: scale(0.99); }
+  .btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ERROR */
+  .error-msg {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: #ff6b8a;
+    text-align: center;
+    display: none;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* RESULT */
+  .result-wrap {
+    margin-top: 1.5rem;
+    display: none;
+    animation: resultIn 0.4s ease both;
+  }
+
+  .result-wrap.show { display: block; }
+
+  @keyframes resultIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .result-card {
+    background: var(--pl-purple);
+    border: 1px solid rgba(0,255,133,0.35);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(0,255,133,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .result-team {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    color: var(--pl-white);
+  }
+
+  .result-season {
+    font-size: 0.8rem;
+    color: rgba(0,255,133,0.7);
+    margin-top: 4px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .result-pts-block {
+    text-align: right;
+  }
+
+  .result-pts {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--pl-green);
+    line-height: 1;
+  }
+
+  .result-pts-label {
+    font-size: 0.72rem;
+    color: var(--pl-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    text-align: right;
+  }
+
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .stat-item { display: flex; flex-direction: column; gap: 3px; }
+
+  .stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--pl-muted);
+  }
+
+  .stat-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--pl-white);
+  }
+
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .tier-badge::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tier-top4    { background: rgba(0,255,133,0.12); color: #00ff85; border: 1px solid rgba(0,255,133,0.3); }
+  .tier-top4::before { background: #00ff85; }
+  .tier-top10   { background: rgba(56,153,255,0.12); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .tier-top10::before { background: #60a5fa; }
+  .tier-mid     { background: rgba(255,200,80,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .tier-mid::before { background: #fbbf24; }
+  .tier-rel     { background: rgba(255,77,109,0.12); color: #ff6b8a; border: 1px solid rgba(255,107,138,0.3); }
+  .tier-rel::before { background: #ff6b8a; }
+
+  /* COLAB SNIPPET */
+  .snippet-wrap {
+    margin-top: 1.5rem;
+    animation: fadeUp 0.5s 0.25s ease both;
+  }
+
+  .snippet-card {
+    background: var(--pl-mid);
+    border: 1px solid var(--pl-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .snippet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.25rem;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--pl-border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .snippet-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .snippet-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pl-green); }
+
+  .snippet-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--pl-green);
+  }
+
+  .snippet-toggle {
+    font-size: 0.75rem;
+    color: var(--pl-muted);
+    transition: transform 0.2s;
+  }
+
+  .snippet-toggle.open { transform: rotate(180deg); }
+
+  .snippet-body { display: none; padding: 1.25rem; }
+  .snippet-body.open { display: block; }
+
+  .snippet-desc {
+    font-size: 0.82rem;
+    color: var(--pl-muted);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,255,133,0.1);
+    border-radius: var(--radius);
+    padding: 1rem;
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: #a8d8a8;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: 'Courier New', monospace;
+  }
+
+  pre .kw  { color: #c792ea; }
+  pre .fn  { color: #82aaff; }
+  pre .st  { color: #c3e88d; }
+  pre .cm  { color: #546e7a; font-style: italic; }
+  pre .gr  { color: var(--pl-green); }
+
+  .btn-copy {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid rgba(0,255,133,0.3);
+    border-radius: var(--radius);
+    padding: 7px 16px;
+    color: var(--pl-green);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-copy:hover { background: rgba(0,255,133,0.08); }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* LOADING SPINNER */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(56,0,60,0.3);
+    border-top-color: var(--pl-purple);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15H9V8h2v9zm5 0h-2V8h2v9z"/></svg>
+    </div>
+    <div>
+      <div class="header-title">PL <span>Points</span> Predictor</div>
+      <div class="header-sub">Predict next-season points for any stable Premier League side · Seasons 18/19 → 24/25</div>
+    </div>
+  </div>
+
+  <!-- COLAB URL SETTINGS -->
+  <div class="settings-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <label>Colab URL</label>
+    <input type="text" id="ngrokInput" placeholder="https://your-ngrok-url.ngrok-free.app  (paste from Colab output)" />
+    <button class="btn-save" onclick="saveUrl()">Connect</button>
+  </div>
+
+  <!-- MAIN FORM -->
+  <div class="main-grid">
+
+    <!-- TEAM SELECTOR -->
+    <div class="card">
+      <div class="card-title">Select Team</div>
+      <div class="team-grid" id="teamGrid"></div>
+    </div>
+
+    <!-- SEASON SELECTOR -->
+    <div class="card">
+      <div class="card-title">Season</div>
+      <div class="season-grid" id="seasonGrid"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="card stats-card">
+      <div class="card-title">Match Statistics</div>
+      <div class="stats-grid">
+        <div class="field">
+          <label>Matches Played</label>
+          <input type="number" id="mp" value="38" min="1" max="38" placeholder="38"/>
+        </div>
+        <div class="field">
+          <label>Wins (W)</label>
+          <input type="number" id="w" min="0" max="38" placeholder="e.g. 20"/>
+        </div>
+        <div class="field">
+          <label>Draws (D)</label>
+          <input type="number" id="d" min="0" max="38" placeholder="e.g. 8"/>
+        </div>
+        <div class="field">
+          <label>Losses (L)</label>
+          <input type="number" id="l" min="0" max="38" placeholder="e.g. 10"/>
+        </div>
+        <div class="field">
+          <label>Goals For (GF)</label>
+          <input type="number" id="gf" min="0" placeholder="e.g. 65"/>
+        </div>
+        <div class="field">
+          <label>Goals Against (GA)</label>
+          <input type="number" id="ga" min="0" placeholder="e.g. 45"/>
+        </div>
+        <div class="field wide">
+          <label>Shots on Target / Match</label>
+          <input type="number" id="sot" min="0" step="0.1" placeholder="e.g. 4.8"/>
+          <div class="field-hint">Average per game — typically 2.5 to 7.5</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREDICT BUTTON -->
+  <div class="predict-wrap">
+    <button class="btn-predict" id="predictBtn" onclick="predict()">
+      <span id="btnText">PREDICT POINTS</span>
+      <span style="font-size:1.4rem">→</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+    <div class="error-msg" id="errMsg"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-wrap" id="resultWrap">
+    <div class="result-card">
+      <div class="result-top">
+        <div>
+          <div class="result-team" id="rTeam">Arsenal</div>
+          <div class="result-season" id="rSeason">2023/24</div>
+        </div>
+        <div class="result-pts-block">
+          <div class="result-pts" id="rPts">—</div>
+          <div class="result-pts-label">predicted pts</div>
+        </div>
+      </div>
+      <div class="result-stats">
+        <div class="stat-item">
+          <span class="stat-label">Win Rate</span>
+          <span class="stat-val" id="rWR">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Goal Diff</span>
+          <span class="stat-val" id="rGD">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">SOT / Match</span>
+          <span class="stat-val" id="rSOT">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Predicting For</span>
+          <span class="stat-val" id="rSNum">—</span>
+        </div>
+      </div>
+      <div id="tierBadge" class="tier-badge">—</div>
+    </div>
+  </div>
+
+  <!-- COLAB SNIPPET (collapsible) -->
+  <div class="snippet-wrap">
+    <div class="snippet-card">
+      <div class="snippet-header" onclick="toggleSnippet()">
+        <div class="snippet-header-left">
+          <div class="snippet-dot"></div>
+          <div class="snippet-title">Colab Flask Server — Copy &amp; Run in Notebook</div>
+        </div>
+        <div class="snippet-toggle" id="snippetToggle">▼</div>
+      </div>
+      <div class="snippet-body" id="snippetBody">
+        <div class="snippet-desc">
+          Paste this into a new cell in your Colab notebook and run it. It starts a Flask server around your trained model and prints the URL to paste above.
+        </div>
+        <pre id="codeBlock"><span class="kw">import</span> os
+os.system(<span class="st">"kill -9 $(lsof -t -i:5001) 2>/dev/null"</span>)
+
+<span class="kw">from</span> flask <span class="kw">import</span> Flask, request, jsonify
+<span class="kw">from</span> flask_cors <span class="kw">import</span> CORS
+<span class="kw">from</span> pyngrok <span class="kw">import</span> ngrok
+<span class="kw">import</span> threading, pandas <span class="kw">as</span> pd, numpy <span class="kw">as</span> np, joblib
+
+<span class="cm"># Set your ngrok authtoken (only needed once per session)</span>
+ngrok.set_auth_token(<span class="st">"PASTE_YOUR_NGROK_TOKEN_HERE"</span>)
+
+<span class="cm"># Load your saved model</span>
+model = joblib.load(<span class="st">"final_random_forest_model.pkl"</span>)
+FEATURE_COLS = [col <span class="kw">for</span> col <span class="kw">in</span> X.columns <span class="kw">if</span> col != <span class="st">'Season'</span>]
+
+app = Flask(<span class="st">'__main__'</span>)
+CORS(app)
+
+<span class="kw">@app</span>.route(<span class="st">'/predict'</span>, methods=[<span class="st">'POST'</span>])
+<span class="kw">def</span> <span class="fn">predict_endpoint</span>():
+    data    = request.json
+    team    = data[<span class="st">'team_name'</span>]
+    mp      = <span class="fn">int</span>(data[<span class="st">'matches_played'</span>])
+    wins    = <span class="fn">int</span>(data[<span class="st">'wins'</span>])
+    draws   = <span class="fn">int</span>(data[<span class="st">'draws'</span>])
+    losses  = <span class="fn">int</span>(data[<span class="st">'losses'</span>])
+    gf      = <span class="fn">int</span>(data[<span class="st">'goals_for'</span>])
+    ga      = <span class="fn">int</span>(data[<span class="st">'goals_against'</span>])
+    sot     = <span class="fn">float</span>(data[<span class="st">'sot_per_match'</span>])
+    sn      = <span class="fn">int</span>(data[<span class="st">'season_num'</span>])
+
+    row = pd.Series(<span class="fn">0</span>, index=FEATURE_COLS, dtype=object)
+    row[<span class="st">'MatchesPlayed'</span>] = <span class="fn">38</span>
+    row[<span class="st">'W'</span>]            = wins
+    row[<span class="st">'D'</span>]            = draws
+    row[<span class="st">'L'</span>]            = losses
+    row[<span class="st">'GF'</span>]           = gf
+    row[<span class="st">'GA'</span>]           = ga
+    row[<span class="st">'GD'</span>]           = gf - ga
+    row[<span class="st">'SOT_per_match'</span>]= <span class="fn">float</span>(sot)
+    row[<span class="st">'Season_num'</span>]   = sn
+    team_col = <span class="fn">f"Team_{team}"</span>
+    <span class="kw">if</span> team_col <span class="kw">in</span> row.index:
+        row[team_col] = <span class="fn">1</span>
+
+    input_df = pd.DataFrame([row])
+    <span class="kw">for</span> c <span class="kw">in</span> input_df.columns:
+        <span class="kw">if</span> c.startswith(<span class="st">'Team_'</span>):
+            input_df[c] = input_df[c].astype(<span class="fn">int</span>)
+
+    pts_full = model.predict(input_df)[<span class="fn">0</span>]
+    scaled   = (pts_full / <span class="fn">38</span>) * mp
+    <span class="kw">return</span> jsonify({<span class="st">'predicted_points'</span>: <span class="fn">round</span>(scaled, <span class="fn">2</span>)})
+
+public_url = ngrok.connect(<span class="fn">5001</span>).public_url
+<span class="fn">print</span>(<span class="gr">f"✅ Paste this URL into the GUI: {public_url}"</span>)
+threading.Thread(target=<span class="kw">lambda</span>: app.run(port=<span class="fn">5001</span>)).start()</pre>
+        <button class="btn-copy" onclick="copyCode()">Copy Code</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TEAMS = [
+  'Arsenal','Aston Villa','Bournemouth','Brentford','Brighton',
+  'Chelsea','Crystal Palace','Everton','Fulham','Liverpool',
+  'Man City','Man United','Newcastle','Nottm Forest','Spurs',
+  'West Ham','Wolves'
+];
+
+const SEASONS = [
+  {n:1,y:'18/19'},{n:2,y:'19/20'},{n:3,y:'20/21'},{n:4,y:'21/22'},
+  {n:5,y:'22/23'},{n:6,y:'23/24'},{n:7,y:'24/25'}
+];
+
+const SEASON_NAMES = {
+  1:'2018/19',2:'2019/20',3:'2020/21',4:'2021/22',
+  5:'2022/23',6:'2023/24',7:'2024/25'
+};
+
+const NEXT_SEASON_NAMES = {
+  1:'2019/20',2:'2020/21',3:'2021/22',4:'2022/23',
+  5:'2023/24',6:'2024/25',7:'2025/26'
+};
+
+let selectedTeam = '';
+let selectedSeason = 0;
+let ngrokUrl = localStorage.getItem('pl_ngrok_url') || '';
+
+// Init
+window.onload = () => {
+  buildTeams();
+  buildSeasons();
+  if (ngrokUrl) {
+    document.getElementById('ngrokInput').value = ngrokUrl;
+    document.getElementById('statusDot').classList.add('connected');
+  }
+};
+
+function buildTeams() {
+  const grid = document.getElementById('teamGrid');
+  TEAMS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'team-btn';
+    b.textContent = t;
+    b.onclick = () => {
+      document.querySelectorAll('.team-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      selectedTeam = t;
+    };
+    grid.appendChild(b);
+  });
+}
+
+function buildSeasons() {
+  const grid = document.getElementById('seasonGrid');
+  SEASONS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'season-btn';
+    b.innerHTML = `<span class="season-num">${s.n}</span><span class="season-yr">${s.y}</span>`;
+    b.onclick = () => {
+      document.querySelectorAll('.season-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      selectedSeason = s.n;
+    };
+    grid.appendChild(b);
+  });
+}
+
+function saveUrl() {
+  const val = document.getElementById('ngrokInput').value.trim().replace(/\/$/, '');
+  if (val.startsWith('http')) {
+    ngrokUrl = val;
+    localStorage.setItem('pl_ngrok_url', val);
+    document.getElementById('statusDot').classList.add('connected');
+    alert('✅ Connected to Colab! Predictions will now use your real model.');
+  } else {
+    alert('Please enter a valid URL starting with https://');
+  }
+}
+
+function getTier(pts) {
+  if (pts >= 70) return { label: 'Top 4 contender',     cls: 'tier-top4'  };
+  if (pts >= 55) return { label: 'Top half / Europe',   cls: 'tier-top10' };
+  if (pts >= 40) return { label: 'Mid-table safety',    cls: 'tier-mid'   };
+  return           { label: 'Relegation risk',         cls: 'tier-rel'   };
+}
+
+function localFallback(mp, w, d, l, gf, ga, sot, sn) {
+  const base = (w * 3 + d) * (38 / mp);
+  const sotBonus = (sot - 4) * 1.2;
+  const snAdj = (sn - 4) * 0.5;
+  return Math.max(0, Math.min(114, base + sotBonus + snAdj));
+}
+
+async function predict() {
+  const err = document.getElementById('errMsg');
+  err.classList.remove('show');
+
+  const mp  = +document.getElementById('mp').value;
+  const w   = +document.getElementById('w').value;
+  const d   = +document.getElementById('d').value;
+  const l   = +document.getElementById('l').value;
+  const gf  = +document.getElementById('gf').value;
+  const ga  = +document.getElementById('ga').value;
+  const sot = +document.getElementById('sot').value;
+
+  if (!selectedTeam) { showErr('Please select a team.'); return; }
+  if (!selectedSeason) { showErr('Please select a season.'); return; }
+  if (!mp || w === '' || d === '' || l === '' || !gf || !ga || !sot) {
+    showErr('Please fill in all match statistics.'); return;
+  }
+  if (w + d + l !== mp) {
+    showErr(`W + D + L (${w+d+l}) must equal Matches Played (${mp}).`); return;
+  }
+
+  setLoading(true);
+
+  let pts;
+  if (ngrokUrl) {
+    try {
+      const res = await fetch(ngrokUrl + '/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team_name: selectedTeam,
+          matches_played: mp, wins: w, draws: d, losses: l,
+          goals_for: gf, goals_against: ga,
+          sot_per_match: sot, season_num: selectedSeason
+        })
+      });
+      const json = await res.json();
+      pts = json.predicted_points;
+    } catch (e) {
+      pts = localFallback(mp, w, d, l, gf, ga, sot, selectedSeason);
+      showErr('Could not reach Colab — showing heuristic estimate instead.');
+    }
+  } else {
+    pts = localFallback(mp, w, d, l, gf, ga, sot, selectedSeason);
+  }
+
+  setLoading(false);
+  showResult(pts, mp, w, gf, ga, sot);
+}
+
+function showResult(pts, mp, w, gf, ga, sot) {
+  document.getElementById('rTeam').textContent = selectedTeam;
+  document.getElementById('rSeason').textContent = 'Predicting for ' + NEXT_SEASON_NAMES[selectedSeason] + ' · based on ' + SEASON_NAMES[selectedSeason] + ' stats';
+  document.getElementById('rPts').textContent = parseFloat(pts).toFixed(2);
+  document.getElementById('rWR').textContent = (w / mp * 100).toFixed(1) + '%';
+  const gd = gf - ga;
+  document.getElementById('rGD').textContent = (gd > 0 ? '+' : '') + gd;
+  document.getElementById('rSOT').textContent = parseFloat(sot).toFixed(1);
+  document.getElementById('rSNum').textContent = NEXT_SEASON_NAMES[selectedSeason];
+
+  const tier = getTier(parseFloat(pts));
+  const badge = document.getElementById('tierBadge');
+  badge.textContent = tier.label;
+  badge.className = 'tier-badge ' + tier.cls;
+
+  const wrap = document.getElementById('resultWrap');
+  wrap.classList.remove('show');
+  void wrap.offsetWidth;
+  wrap.classList.add('show');
+}
+
+function showErr(msg) {
+  const err = document.getElementById('errMsg');
+  err.textContent = msg;
+  err.classList.add('show');
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('predictBtn');
+  const txt = document.getElementById('btnText');
+  const sp  = document.getElementById('spinner');
+  btn.disabled = on;
+  txt.textContent = on ? 'PREDICTING...' : 'PREDICT POINTS';
+  sp.style.display = on ? 'block' : 'none';
+}
+
+function toggleSnippet() {
+  const body = document.getElementById('snippetBody');
+  const tog  = document.getElementById('snippetToggle');
+  body.classList.toggle('open');
+  tog.classList.toggle('open');
+}
+
+function copyCode() {
+  const code = document.getElementById('codeBlock').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy Code', 2000);
+  });
+}
+</script>
+</body>
+</html>
